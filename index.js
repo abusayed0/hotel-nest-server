@@ -28,6 +28,25 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
+        const hotelNestDB = client.db("hotelNestDB");
+        const roomsCollection = hotelNestDB.collection("roomsCollection");
+
+        // room page related api 
+        app.get("/rooms", async(req, res) => {
+            const query = {};
+            const options = {
+                projection: {
+                    total_review: 1, title: 1, thumbnail_image: 1, cost_per_night: 1
+                },
+            };
+            const cursor = roomsCollection.find(query, options);
+            const allRooms = await cursor.toArray();
+            
+            res.send(allRooms)
+        });
+       
+
+
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -39,10 +58,6 @@ async function run() {
 run().catch(console.dir);
 
 
-// all api 
-app.get("/", (req, res) => {
-    res.send("What's Up!!!!")
-});
 
 
 
