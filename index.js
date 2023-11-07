@@ -31,6 +31,7 @@ async function run() {
         const hotelNestDB = client.db("hotelNestDB");
         const roomsCollection = hotelNestDB.collection("roomsCollection");
         const bookingDateCollection = hotelNestDB.collection("bookingDateCollection");
+        const usersBookingsCollection = hotelNestDB.collection("usersBookingsCollection");
 
         // rooms page related api 
         app.get("/rooms", async (req, res) => {
@@ -55,24 +56,64 @@ async function run() {
             const room = await roomsCollection.findOne(query);
             res.send(room);
         });
-        app.get("/booking-data", async(req, res) => {
-            const { date, roomId } = req.query;
-            console.log(date);
-            const query = { roomId: roomId, bookedDate: date };
-            
+        app.get("/booking-data", async (req, res) => {
+            const { bookedDate, roomId } = req.query;
+            console.log(bookedDate);
+            const query = { roomId: roomId, bookedDate: bookedDate };
+
             // Execute query
             const roomBookingData = await bookingDateCollection.findOne(query);
-            if(!roomBookingData){
+            console.log(roomBookingData);
+            if (!roomBookingData) {
                 res.send({
-                    status : "all room available"
+                    status: "all room available"
                 })
             }
-            else{
+            else {
                 res.send({
-                    restSeat : roomBookingData.restSeat
+                    restSeat: roomBookingData.restSeat
                 })
             }
 
+        });
+        app.post("/booking-data", async (req, res) => {
+            const bookingData = req.body;
+            const { bookedDate, roomId } = bookingData;
+            const query = { roomId: roomId, bookedDate: bookedDate };
+            const exist = await bookingDateCollection.findOne(query);
+
+            console.log(exist);
+            if (!exist) {
+                const result = await bookingDateCollection.insertOne(bookingData);
+                res.send(result)
+            }
+            else {
+                const updateDoc = {
+                    $inc: {
+                        restSeat: -1
+                    },
+                };
+                const result = await bookingDateCollection.updateOne(query, updateDoc);
+                res.send(result)
+            }
+        });
+
+        app.post("/users-bookings", async (req, res) => {
+            const bookingInfo = req.body;
+            console.log(bookingInfo);
+            const result = await usersBookingsCollection.insertOne(bookingInfo);
+            res.send(bookingInfo);
+        });
+
+        // booking page related api 
+        app.get("/my-bookings", async(req, res) => {
+            const requestedUserEmail = req.query.email;
+            console.log(requestedUserEmail);
+           
+            const query = { userEmail : requestedUserEmail };
+            const cursor = await usersBookingsCollection.find(query).toArray();
+
+            res.send(cursor)
         });
 
         // Send a ping to confirm a successful connection
