@@ -100,21 +100,40 @@ async function run() {
 
         app.post("/users-bookings", async (req, res) => {
             const bookingInfo = req.body;
-            console.log(bookingInfo);
+            // console.log(bookingInfo);
             const result = await usersBookingsCollection.insertOne(bookingInfo);
-            res.send(bookingInfo);
+            res.send(result);
         });
 
         // booking page related api 
-        app.get("/my-bookings", async(req, res) => {
+        app.get("/my-bookings", async (req, res) => {
             const requestedUserEmail = req.query.email;
             console.log(requestedUserEmail);
-           
-            const query = { userEmail : requestedUserEmail };
+
+            const query = { userEmail: requestedUserEmail };
             const cursor = await usersBookingsCollection.find(query).toArray();
 
             res.send(cursor)
         });
+        app.delete("/my-bookings", async (req, res) => {
+            const bookingId = req.query.bookingId;
+            const query = { _id: new ObjectId(bookingId) };
+            const result = await usersBookingsCollection.deleteOne(query);
+            res.send(result);
+        });
+        app.patch("/booking-data", async (req, res) => {
+            const bookingData = req.body;
+            const { bookedDate, roomId } = bookingData;
+            const filter = { roomId: roomId, bookedDate: bookedDate };
+            const updateDoc = {
+                $inc: {
+                    restSeat: 1
+                },
+            };
+            const result = await bookingDateCollection.updateOne(filter, updateDoc);
+
+            res.send(result);
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
