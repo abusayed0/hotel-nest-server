@@ -3,12 +3,36 @@ const cors = require('cors');
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 
 // middleware 
-app.use(cors());
+app.use(cors({
+    origin: ["http://localhost:5173"],
+    credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
+
+// custom middleware 
+const verifyToken = (req, res, next) => {
+    const token = req.cookies?.token;
+    console.log("token inside verify", token);
+    if (!token) {
+        return res.status(401).send({ messsage: "Unauthorized" })
+    }
+    jwt.verify(token, process.env.SECRET_TOKEN, (err, decoded) => {
+        if (err) {
+            console.log("token erro",err);
+            return res.status(401).send({ messsage: "Unauthorized" })
+        }
+        req.user = decoded;
+        console.log("decoded", decoded);
+        next();
+    });
+}
 
 
 
@@ -33,6 +57,29 @@ async function run() {
         const bookingDateCollection = hotelNestDB.collection("bookingDateCollection");
         const usersBookingsCollection = hotelNestDB.collection("usersBookingsCollection");
         const reviewsCollection = hotelNestDB.collection("reviewsCollection");
+
+        // auth related api 
+        app.post("/jwt", (req, res) => {
+            const user = req.body;
+            console.log("token created for",user);
+            const token = jwt.sign(user, process.env.SECRET_TOKEN, { expiresIn: "1h" });
+
+            res
+                .cookie("token", token, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: "none",
+                })
+                // .send({ success: true,token })
+                .send({ success: true})
+        });
+        app.post("/sign-out", (req, res) => {
+            const {email} = req.body;
+            console.log("sign out user", email);
+            res
+            .clearCookie("token")
+            .send({success: true});
+        });
 
         // rooms page related api 
         app.get("/rooms", async (req, res) => {
@@ -106,19 +153,23 @@ async function run() {
             res.send(result);
         });
 
-        app.get("/reviews", async(req, res) => {
-            const {roomId} = req.query;
+        app.get("/reviews", async (req, res) => {
+            const { roomId } = req.query;
             console.log(roomId);
-            const query = { roomId : roomId };
+            const query = { roomId: roomId };
             const cursor = await reviewsCollection.find(query).toArray();
             res.send(cursor)
         });
 
         // booking page related api 
-        app.get("/my-bookings", async (req, res) => {
+        app.get("/my-bookings", verifyToken, async (req, res) => {
+            const tokenOwner = req.user.email;
+            console.log(tokenOwner);
             const requestedUserEmail = req.query.email;
             console.log(requestedUserEmail);
-
+            if(tokenOwner !== requestedUserEmail){
+                return res.status(403).send({messsage: "Forbidden"})
+            }
             const query = { userEmail: requestedUserEmail };
             const cursor = await usersBookingsCollection.find(query).toArray();
 
