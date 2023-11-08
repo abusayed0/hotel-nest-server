@@ -32,6 +32,7 @@ async function run() {
         const roomsCollection = hotelNestDB.collection("roomsCollection");
         const bookingDateCollection = hotelNestDB.collection("bookingDateCollection");
         const usersBookingsCollection = hotelNestDB.collection("usersBookingsCollection");
+        const reviewsCollection = hotelNestDB.collection("reviewsCollection");
 
         // rooms page related api 
         app.get("/rooms", async (req, res) => {
@@ -61,7 +62,7 @@ async function run() {
             console.log(bookedDate);
             const query = { roomId: roomId, bookedDate: bookedDate };
 
-           
+
             const roomBookingData = await bookingDateCollection.findOne(query);
             console.log({ exist: roomBookingData });
             if (!roomBookingData) {
@@ -103,6 +104,14 @@ async function run() {
             // console.log(bookingInfo);
             const result = await usersBookingsCollection.insertOne(bookingInfo);
             res.send(result);
+        });
+
+        app.get("/reviews", async(req, res) => {
+            const {roomId} = req.query;
+            console.log(roomId);
+            const query = { roomId : roomId };
+            const cursor = await reviewsCollection.find(query).toArray();
+            res.send(cursor)
         });
 
         // booking page related api 
@@ -169,11 +178,11 @@ async function run() {
                 },
             };
             const result = await bookingDateCollection.updateOne(filter1, updateDoc1);
-            console.log({important: result});
+            console.log({ important: result });
             const query = { bookedDate: newDate, roomId: roomId };
 
             const search = await bookingDateCollection.findOne(query);
-            if(search){
+            if (search) {
                 const updateDoc2 = {
                     $inc: {
                         restSeat: -1
@@ -182,13 +191,31 @@ async function run() {
                 const result2 = await bookingDateCollection.updateOne(filter1, updateDoc2);
                 res.send(result2)
             }
-            else{
-                const bookingData = {roomId: roomId, bookedDate: newDate, restSeat: restSeat}
+            else {
+                const bookingData = { roomId: roomId, bookedDate: newDate, restSeat: restSeat }
                 const result3 = await bookingDateCollection.insertOne(bookingData);
                 res.send(result3);
             }
-            
+
         });
+
+        // review page realted api 
+        app.post("/reviews", async (req, res) => {
+            const reviewInfo = req.body;
+            const { roomId } = reviewInfo;
+            const result = await reviewsCollection.insertOne(reviewInfo);
+            if (result.insertedId) {
+                const query = { _id: new ObjectId(roomId) };
+                const newReviewCount = {
+                    $inc: {
+                        total_review: 1
+                    },
+                };
+                const updateRoomData = await roomsCollection.updateOne(query, newReviewCount);
+            }
+            res.send(result)
+        });
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
