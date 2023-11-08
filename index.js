@@ -283,7 +283,9 @@ run().catch(console.dir);
 
 
 
-
+app.get("/", (req, res) => {
+    res.send("Hotel Nest server is okay!")
+});
 
 app.listen(port, () => {
     console.log(`Hotel Nest server running on port : ${port}`);
