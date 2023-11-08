@@ -61,9 +61,9 @@ async function run() {
             console.log(bookedDate);
             const query = { roomId: roomId, bookedDate: bookedDate };
 
-            // Execute query
+           
             const roomBookingData = await bookingDateCollection.findOne(query);
-            console.log(roomBookingData);
+            console.log({ exist: roomBookingData });
             if (!roomBookingData) {
                 res.send({
                     status: "all room available"
@@ -133,7 +133,62 @@ async function run() {
             const result = await bookingDateCollection.updateOne(filter, updateDoc);
 
             res.send(result);
-        })
+        });
+
+        // update booking date page related api 
+        app.get("/my-bookings/:id", async (req, res) => {
+            const bookingId = req.params.id;
+
+            const query = { _id: new ObjectId(bookingId) };
+
+            const booking = await usersBookingsCollection.findOne(query);
+            res.send(booking)
+        });
+
+        app.patch("/my-bookings/:id", async (req, res) => {
+            const bookingId = req.params.id;
+            const { date: updatedDate } = req.body;
+            console.log(updatedDate);
+            const filter = { _id: new ObjectId(bookingId) };
+            const updateDoc = {
+                $set: {
+                    bookedDate: updatedDate
+                },
+            };
+            const result = await usersBookingsCollection.updateOne(filter, updateDoc);
+            console.log(bookingId);
+            res.send(result)
+        });
+        app.patch("/update/booking-data", async (req, res) => {
+            const { preDate, newDate, roomId, restSeat } = req.body;
+            console.log(req.body);
+            const filter1 = { bookedDate: preDate, roomId: roomId };
+            const updateDoc1 = {
+                $inc: {
+                    restSeat: 1
+                },
+            };
+            const result = await bookingDateCollection.updateOne(filter1, updateDoc1);
+            console.log({important: result});
+            const query = { bookedDate: newDate, roomId: roomId };
+
+            const search = await bookingDateCollection.findOne(query);
+            if(search){
+                const updateDoc2 = {
+                    $inc: {
+                        restSeat: -1
+                    },
+                };
+                const result2 = await bookingDateCollection.updateOne(filter1, updateDoc2);
+                res.send(result2)
+            }
+            else{
+                const bookingData = {roomId: roomId, bookedDate: newDate, restSeat: restSeat}
+                const result3 = await bookingDateCollection.insertOne(bookingData);
+                res.send(result3);
+            }
+            
+        });
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
