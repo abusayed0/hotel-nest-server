@@ -10,7 +10,10 @@ const app = express();
 
 // middleware 
 app.use(cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+        // "http://localhost:5173"
+        "https://hotel-nest.netlify.app"
+    ],
     credentials: true
 }));
 app.use(express.json());
@@ -25,7 +28,7 @@ const verifyToken = (req, res, next) => {
     }
     jwt.verify(token, process.env.SECRET_TOKEN, (err, decoded) => {
         if (err) {
-            console.log("token erro",err);
+            console.log("token erro", err);
             return res.status(401).send({ messsage: "Unauthorized" })
         }
         req.user = decoded;
@@ -61,7 +64,7 @@ async function run() {
         // auth related api 
         app.post("/jwt", (req, res) => {
             const user = req.body;
-            console.log("token created for",user);
+            console.log("token created for", user);
             const token = jwt.sign(user, process.env.SECRET_TOKEN, { expiresIn: "1h" });
 
             res
@@ -71,14 +74,14 @@ async function run() {
                     sameSite: "none",
                 })
                 // .send({ success: true,token })
-                .send({ success: true})
+                .send({ success: true })
         });
         app.post("/sign-out", (req, res) => {
-            const {email} = req.body;
+            const { email } = req.body;
             console.log("sign out user", email);
             res
-            .clearCookie("token")
-            .send({success: true});
+                .clearCookie("token")
+                .send({ success: true });
         });
 
         // rooms page related api 
@@ -93,7 +96,7 @@ async function run() {
             const allRooms = await cursor.toArray();
 
             res.send(allRooms)
-        });
+        })
 
         // room details page related api 
         app.get("/room/:id", async (req, res) => {
@@ -167,8 +170,8 @@ async function run() {
             console.log(tokenOwner);
             const requestedUserEmail = req.query.email;
             console.log(requestedUserEmail);
-            if(tokenOwner !== requestedUserEmail){
-                return res.status(403).send({messsage: "Forbidden"})
+            if (tokenOwner !== requestedUserEmail) {
+                return res.status(403).send({ messsage: "Forbidden" })
             }
             const query = { userEmail: requestedUserEmail };
             const cursor = await usersBookingsCollection.find(query).toArray();
