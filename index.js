@@ -53,7 +53,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const hotelNestDB = client.db("hotelNestDB");
         const roomsCollection = hotelNestDB.collection("roomsCollection");
@@ -80,8 +80,9 @@ async function run() {
             const { email } = req.body;
             console.log("sign out user", email);
             res
-                .clearCookie("token")
-                .send({ success: true });
+                .clearCookie('token', { maxAge: 0, sameSite: 'none', secure: true })
+                .send({ success: true })
+
         });
 
         // rooms page related api 
